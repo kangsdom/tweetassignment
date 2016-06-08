@@ -18,7 +18,7 @@ typedef struct Tuser {
 } Tuser;
 void Tuser_init(Tuser* self) {
 	self->id_number = 0;
-	self->screen_name = NULL;
+	self->screen_name = (char*)malloc(sizeof(char)*MAX);
 	self->numberOfFriend = 0;
 	self->numberOfTweet = 0;
 }
@@ -38,7 +38,7 @@ typedef struct	Tweet {
 } Tweet;
 void Tweet_init(Tweet* self) {
 	self->user_id = 0;
-	self->word = NULL;
+	self->word = (char*)malloc(sizeof(char)*MAX);;
 }
 
 
@@ -55,13 +55,12 @@ struct Tree {
 };
 
 
-
 Tree* pWordTree = new Tree;	//word tree pointer 선언;
-Tree* uWordTree = new Tree;	//user tree pointer 선언;
+Tree* pUserTree = new Tree;	//user tree pointer 선언;
 
 
 
-int Compare_word(Tree* Target_Tree, long long int position)//삽입 후 비교
+int Compare_word(Tree* Target_Tree, long long int position)//word tree 삽입 후 비교
 {
 	long long int idxtemp;
 	long long int temp;
@@ -87,7 +86,7 @@ int Compare_word(Tree* Target_Tree, long long int position)//삽입 후 비교
 	return 0;
 }
 
-void Add_Tree_word(Tree* Target_Tree, char* word) {			//삽입
+void Add_Tree_word(Tree* Target_Tree, char* word) {			//word tree 삽입
 	if (Target_Tree->idx == 1) {							//트리가 비엇을 경우 그냥 넣기
 		strcpy(Target_Tree->Array[Target_Tree->idx].word, word);
 		Target_Tree->Array[Target_Tree->idx].num = 1;
@@ -108,7 +107,7 @@ void Add_Tree_word(Tree* Target_Tree, char* word) {			//삽입
 	Target_Tree->Array[Target_Tree->idx].idx = Target_Tree->idx;
 	Target_Tree->idx += 1;
 }
-int Compare_user(Tree* Target_Tree, long long int position)//삽입 후 비교
+int Compare_user(Tree* Target_Tree, long long int position)//user tree 삽입 후 비교
 {
 	long long int idxtemp;
 	long long int temp;
@@ -134,7 +133,7 @@ int Compare_user(Tree* Target_Tree, long long int position)//삽입 후 비교
 	return 0;
 }
 
-void Add_Tree_user(Tree* Target_Tree, unsigned long long int id) {			//삽입
+void Add_Tree_user(Tree* Target_Tree, unsigned long long int id) {			//user tree 삽입
 	if (Target_Tree->idx == 1) {							//트리가 비엇을 경우 그냥 넣기
 		Target_Tree->Array[Target_Tree->idx].id_number = id;
 		Target_Tree->Array[Target_Tree->idx].num = 1;
@@ -302,7 +301,7 @@ int main() {
 	long long int MinNT = 0;//minimum number of tweet per user.
 	long long int MaxNT = 0;//maximum number of tweet per user.
 
-	char* ull;
+	char* ull;//strtoul을 위해 사용된 무의미한 변수
 
 	while ((!feof(User)) && (TotalUser<NELEM)) {
 		fgets(number1, MAX, User); //id받기
@@ -311,7 +310,7 @@ int main() {
 		fgets(a, MAX, User);	//빈 줄 받기
 		Tuser_init(&tusers[TotalUser]);
 		tusers[TotalUser].id_number = strtoull(number1, &ull, 10);
-		tusers[TotalUser].screen_name = name;
+		strcpy(tusers[TotalUser].screen_name, name);
 		tusers[TotalUser].numberOfFriend = 0;
 		TotalUser++;
 	}
@@ -346,7 +345,7 @@ int main() {
 		fgets(a, MAX, Word);	//빈 줄 받기
 		Tweet_init(&tweets[TotalTweet]);
 		tweets[TotalTweet].user_id = strtoull(number1, &ull, 10);
-		tweets[TotalTweet].word = tweet;
+		strcpy(tweets[TotalTweet].word, tweet);
 		TotalTweet++;
 		for (int i = 0; i < TotalUser; i++) {//유저별 트윗 횟수 더하기
 			if (tusers[i].id_number == strtoull(number1, &ull, 10)) {
@@ -354,7 +353,7 @@ int main() {
 				break;
 			}
 		}
-		Add_Tree_user(uWordTree, strtoull(number1, &ull, 10));
+		Add_Tree_user(pUserTree, strtoull(number1, &ull, 10));
 		Add_Tree_word(pWordTree, tweet);
 		//InsertList(tweet);
 		//포문은 최악의 경우 트윗이 추가될 때마다 n번 실행해야 하므로 개선 필요2
@@ -383,8 +382,9 @@ int main() {
 		printf("Select Menu:\n");
 		//menu 출력
 		scanf("%d", &menu);
-
-		long long int heap[32];
+		unsigned long long int heap[32];
+		int UserListIdx=0;
+		unsigned long long int userList[NELEM];
 
 		if (menu == 0) {
 			printf("\nTotal users: %lld\n", TotalUser);
@@ -438,7 +438,7 @@ int main() {
 		}
 		if (menu == 3) {
 			for (int i = 1; i < 32; i++) {
-				heap[i] = (*uWordTree).Array[i].num;		//상위 5개는 적어도 32개중에 하나이다, 따라서 heap sort를 해줄 필요가 없다.
+				heap[i] = (*pUserTree).Array[i].num;		//상위 5개는 적어도 32개중에 하나이다, 따라서 heap sort를 해줄 필요가 없다.
 			}
 			for (int j = 0; j < 5; j++) {			//가장 큰 것을 골라내고 그 값을 출력 한 후 그 값을 0으로 반환, 5번 반복
 				long long int max = 0;
@@ -449,8 +449,35 @@ int main() {
 						maxidx = i;
 					}
 				}
-				printf("user ID: %llutweeted %lld times\n\n", (*uWordTree).Array[maxidx].id_number, (*uWordTree).Array[maxidx].num);
+				printf("user ID: %llu  tweeted %lld times\n\n", (*pUserTree).Array[maxidx].id_number, (*pUserTree).Array[maxidx].num);
 				heap[maxidx] = 0;
+			}
+		}
+		if (menu == 4) {
+			UserListIdx = 0;
+			char a[] = "\n";
+			char temp[128];
+			printf("Type a word: ");
+			scanf("%s", &temp);
+			strcat(temp, a);
+			printf("\n");
+			for (int i = 0; i < TotalTweet; i++) {
+				if (strcmp(tweets[i].word, temp)==0) {
+					userList[UserListIdx] = tweets[i].user_id;
+					UserListIdx += 1;
+					printf("User id \"%llu\" tweeted\n\n", tweets[i].user_id);
+				}
+			}
+			if (UserListIdx == 0) {
+				printf("No user tweeted this word\n\n");
+			}
+		}
+		if (menu == 5) {
+			for (int i = 0; i < UserListIdx; i++) {
+				userList[i];
+				for (int j = 0; j < TotalFriend; j++) {
+					;
+				}
 			}
 		}
 		if (menu == 99)	break;
